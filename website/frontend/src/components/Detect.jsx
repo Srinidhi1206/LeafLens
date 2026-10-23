@@ -170,10 +170,11 @@ function Results({ result, preview, fileName, onReset }) {
   useEffect(() => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
-  const uncertain = result.fallback_used;
-  const shown = uncertain ? [result.closest_match] : result.detected;
-  const primary = shown[0];
-  const healthy = result.is_healthy;
+  // Main result: the class with the highest model score (top-1), whatever its score.
+  const top = result.probabilities.reduce((a, b) => (b.probability > a.probability ? b : a));
+  const shown = result.fallback_used ? [result.closest_match] : result.detected;
+  const others = result.detected.filter((d) => d.label !== top.label);
+  const topIsHealthy = top.label === "healthy";
 
   return (
     <div ref={ref} className="mt-12 scroll-mt-24 animate-fade-up">
@@ -184,48 +185,23 @@ function Results({ result, preview, fileName, onReset }) {
           <div className="p-6">
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase ${
-                uncertain ? "bg-stone-200 text-stone-700" : healthy ? "bg-leaf-100 text-leaf-700" : "bg-amber-100 text-amber-800"
+                topIsHealthy ? "bg-leaf-100 text-leaf-700" : "bg-amber-100 text-amber-800"
               }`}
             >
-              {healthy && !uncertain ? <ShieldIcon className="h-4 w-4" /> : <AlertIcon className="h-4 w-4" />}
-              {uncertain ? "Uncertain result" : healthy ? "Healthy leaf" : "Disease detected"}
+              {topIsHealthy ? <ShieldIcon className="h-4 w-4" /> : <AlertIcon className="h-4 w-4" />}
+              {topIsHealthy ? "Healthy leaf" : "Disease prediction"}
             </span>
-            {uncertain ? (
-              <>
-                <h3 className="mt-3 font-display text-2xl leading-snug font-semibold text-leaf-900">
-                  Unable to confidently identify this leaf
-                </h3>
-                <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                  <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">
-                    Closest match (not confirmed)
-                  </p>
-                  <p className="mt-1 flex items-baseline justify-between gap-3">
-                    <span className="text-lg font-semibold text-stone-800">{primary.name}</span>
-                    <span className="font-mono text-sm tabular-nums text-stone-700">{pct(primary.probability)}</span>
-                  </p>
-                </div>
-                <div className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
-                  <p>
-                    No class reached the {pct(result.threshold)} confidence threshold. The closest match is only the
-                    highest of several low scores and <strong>may be incorrect</strong>.
-                  </p>
-                  <p className="mt-1.5">
-                    Common causes: the leaf is not an apple leaf (the model supports apple-leaf classes only), or the
-                    photo looks very different from the orchard photos it was trained on (plain backgrounds, rulers,
-                    several leaves, close-up crops). Try a photo of a single leaf on the tree.
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 className="mt-3 font-display text-3xl font-semibold text-leaf-900">
-                  {result.detected.map((d) => d.name).join(" + ")}
-                </h3>
-                <p className="mt-2 text-sm text-leaf-800/70">
-                  Model confidence for <strong>{primary.name}</strong>:{" "}
-                  <strong className="text-leaf-700">{pct(primary.probability)}</strong>
-                </p>
-              </>
+            <p className="mt-4 text-xs font-semibold tracking-wide text-leaf-800/60 uppercase">
+              {topIsHealthy ? "Prediction" : "Predicted Disease"}
+            </p>
+            <h3 className="mt-1 font-display text-3xl font-semibold text-leaf-900">{top.name}</h3>
+            <p className="mt-2 text-sm text-leaf-800/70">
+              Model Score: <strong className="text-leaf-700">{pct(top.probability)}</strong>
+            </p>
+            {others.length > 0 && (
+              <p className="mt-2 text-sm text-leaf-800/70">
+                Also above the {pct(result.threshold)} threshold: {others.map((d) => d.name).join(", ")}
+              </p>
             )}
             <button
               onClick={onReset}
@@ -245,20 +221,20 @@ function Results({ result, preview, fileName, onReset }) {
           <ul className="mt-6 space-y-4">
             {result.probabilities.map((p, i) => {
               const hit = result.detected.some((d) => d.label === p.label);
-              const closest = uncertain && p.label === primary.label;
+              const isTop = p.label === top.label;
               return (
                 <li key={p.label}>
                   <div className="flex items-center justify-between text-sm">
-                    <span className={`font-medium ${hit || closest ? "text-leaf-900" : "text-leaf-800/70"}`}>
+                    <span className={`font-medium ${hit || isTop ? "text-leaf-900" : "text-leaf-800/70"}`}>
                       {p.name}
                       {hit && <span className="ml-2 rounded-full bg-leaf-100 px-2 py-0.5 text-xs text-leaf-700">detected</span>}
-                      {closest && <span className="ml-2 rounded-full bg-stone-200 px-2 py-0.5 text-xs text-stone-700">closest, unconfirmed</span>}
+                      {isTop && !hit && <span className="ml-2 rounded-full bg-leaf-100 px-2 py-0.5 text-xs text-leaf-700">top score</span>}
                     </span>
                     <span className="font-mono tabular-nums text-leaf-800">{pct(p.probability)}</span>
                   </div>
                   <div className="relative mt-1.5 h-2.5 overflow-hidden rounded-full bg-leaf-50">
                     <div
-                      className={`h-full rounded-full transition-[width] duration-1000 ease-out ${hit ? "bg-leaf-500" : "bg-leaf-200"}`}
+                      className={`h-full rounded-full transition-[width] duration-1000 ease-out ${hit || isTop ? "bg-leaf-500" : "bg-leaf-200"}`}
                       style={{ width: `${Math.max(p.probability * 100, 0.5)}%`, transitionDelay: `${i * 80}ms` }}
                     />
                     <div className="absolute inset-y-0 w-px bg-leaf-900/30" style={{ left: `${result.threshold * 100}%` }} />
@@ -274,11 +250,6 @@ function Results({ result, preview, fileName, onReset }) {
       <div className={`mt-6 grid gap-6 ${shown.length > 1 ? "lg:grid-cols-2" : ""}`}>
         {shown.map((d) => (
           <div key={d.label} className="rounded-3xl border border-leaf-100 bg-white p-6 shadow-xl shadow-leaf-900/5 sm:p-8">
-            {uncertain && (
-              <p className="mb-2 text-xs font-semibold tracking-wide text-stone-500 uppercase">
-                About the closest match · not a confirmed diagnosis
-              </p>
-            )}
             <h4 className="font-display text-2xl font-semibold text-leaf-900">{d.name}</h4>
             {d.pathogen && <p className="mt-1 text-sm text-leaf-800/60 italic">{d.pathogen}</p>}
             <p className="mt-4 leading-relaxed text-leaf-800/80">{d.description}</p>
