@@ -11,6 +11,7 @@ Preprocessing and decoding follow the project code:
 import io
 import json
 import os
+import time
 from pathlib import Path
 
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
@@ -41,10 +42,18 @@ app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
 CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "https://leaf-lens-mocha.vercel.app").split(",") if o.strip()]
 CORS(app, resources={r"/api/*": {"origins": CORS_ORIGINS}})
 
-print(f"Loading model from {MODEL_PATH} ...")
+# Small hosting instances get a fraction of one CPU; TensorFlow's default thread pools are sized to
+# the host's core count, which oversubscribes them. TF_NUM_THREADS=0 keeps TensorFlow's default.
+TF_NUM_THREADS = int(os.environ.get("TF_NUM_THREADS", "1"))
+if TF_NUM_THREADS > 0:
+    tf.config.threading.set_intra_op_parallelism_threads(TF_NUM_THREADS)
+    tf.config.threading.set_inter_op_parallelism_threads(TF_NUM_THREADS)
+
+_t0 = time.perf_counter()
+print(f"Loading model from {MODEL_PATH} ...", flush=True)
 model = tf.keras.models.load_model(MODEL_PATH)
 model(np.zeros((1, IMG_SIZE, IMG_SIZE, 3), np.float32), training=False)  # warm-up
-print("Model ready.")
+print(f"Model ready in {time.perf_counter() - _t0:.1f}s.", flush=True)
 
 metrics = json.loads(METRICS_PATH.read_text()) if METRICS_PATH.exists() else None
 
@@ -82,12 +91,15 @@ def predict():
         return jsonify(error="No image uploaded. Send the file in the 'image' field."), 400
     if Path(file.filename).suffix.lower() not in ALLOWED_EXTENSIONS:
         return jsonify(error="Unsupported file type. Please upload a JPG, JPEG or PNG image."), 400
+    t0 = time.perf_counter()
     try:
         x = load_resize(file.read())
     except (UnidentifiedImageError, OSError, tf.errors.InvalidArgumentError):
         return jsonify(error="The file could not be read as an image."), 400
 
+    t1 = time.perf_counter()
     probs = np.asarray(model(x[None], training=False))[0]
+    print(f"predict: preprocess {t1 - t0:.2f}s, model {time.perf_counter() - t1:.2f}s", flush=True)
     confident = bool((probs > THRESHOLD).any())
     pred = decode_predictions(probs)
     labels = sorted((label for label, p in zip(LABELS, pred) if p), key=lambda label: -probs[LABELS.index(label)])
