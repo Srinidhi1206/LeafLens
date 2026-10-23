@@ -18,6 +18,7 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 import numpy as np
 import tensorflow as tf
 from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
 from PIL import Image, UnidentifiedImageError
 
 from disease_info import DISEASE_INFO
@@ -36,6 +37,9 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
 app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
+# Origins allowed to call the API from a browser (comma-separated), e.g. the Vercel frontend.
+CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "https://leaf-lens-mocha.vercel.app").split(",") if o.strip()]
+CORS(app, resources={r"/api/*": {"origins": CORS_ORIGINS}})
 
 print(f"Loading model from {MODEL_PATH} ...")
 model = tf.keras.models.load_model(MODEL_PATH)

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertIcon, LeafIcon, RefreshIcon, ShieldIcon, UploadIcon, XIcon } from "./Icons.jsx";
+import { apiUrl } from "../api.js";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png"];
 const ACCEPTED_EXT = /\.(jpe?g|png)$/i;
@@ -53,14 +54,14 @@ export default function Detect() {
     try {
       const body = new FormData();
       body.append("image", file);
-      const res = await fetch("/api/predict", { method: "POST", body });
+      const res = await fetch(apiUrl("/api/predict"), { method: "POST", body });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) throw new Error(data?.error || `Server error (${res.status}).`);
       setResult(data);
     } catch (e) {
       setError(
         e instanceof TypeError
-          ? "Could not reach the prediction server. Make sure the Flask backend is running."
+          ? "Could not reach the prediction server. The free server may still be starting up (this can take about a minute) — please try again."
           : e.message
       );
     } finally {

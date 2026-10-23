@@ -113,6 +113,17 @@ python ../analysis/probe_image.py path/to/leaf.jpg
 Tests that need `validation_predictions.csv` or a sample image (produced locally by training) are
 skipped automatically when those files are absent.
 
+## Deployment
+
+| Part | Host | Settings |
+|---|---|---|
+| Backend | Render (Python web service) | Root directory `website/backend` · Build `pip install -r requirements.txt` · Start `gunicorn app:app` (reads `gunicorn.conf.py`) · Health check `/api/health` · Python pinned by `.python-version` (3.11) |
+| Frontend | Vercel (Vite) | Root directory `website/frontend` · Env var `VITE_API_BASE_URL` = the Render URL |
+
+The backend allows browser requests from the origins in the `CORS_ORIGINS` environment variable
+(comma-separated; default `https://leaf-lens-mocha.vercel.app`). On Render's free plan the service
+sleeps when idle, so the first request after a pause can take about a minute.
+
 ## How prediction works
 
 1. The image is decoded to RGB and resized to 224 × 224 with antialiasing, exactly as in `training/train.py`.

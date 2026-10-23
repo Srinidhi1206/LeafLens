@@ -15,6 +15,7 @@ npm-debug.log*
 # Secrets and credentials
 .env
 .env.*
+!.env.example
 kaggle.json
 .kaggle/
 *.pem

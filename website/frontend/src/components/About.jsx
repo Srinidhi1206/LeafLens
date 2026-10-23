@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AlertIcon, BrainIcon, ChartIcon, LeafIcon } from "./Icons.jsx";
+import { apiUrl } from "../api.js";
 
 const CLASS_NAMES = {
   healthy: "Healthy",
@@ -46,7 +47,7 @@ export default function About() {
   const [info, setInfo] = useState(null);
 
   useEffect(() => {
-    fetch("/api/model-info").then((r) => (r.ok ? r.json() : null)).then(setInfo).catch(() => setInfo(null));
+    fetch(apiUrl("/api/model-info")).then((r) => (r.ok ? r.json() : null)).then(setInfo).catch(() => setInfo(null));
   }, []);
   const m = info?.metrics;
 
