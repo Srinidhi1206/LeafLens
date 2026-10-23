@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Node / frontend tooling (frontend/dist is committed so the site runs without Node)
+node_modules/
+.vite/
+npm-debug.log*
+
+# Secrets and credentials
+.env
+.env.*
+kaggle.json
+.kaggle/
+*.pem
+*.key
+
+# Datasets and generated training artefacts
+data/
+demo_data/
+plant-pathology-2021-fgvc8/
+train_images/
+test_images/
+*.npy
+*.zip
+outputs/
+submission.csv
+validation_predictions.csv
+folder_eval_predictions.csv
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

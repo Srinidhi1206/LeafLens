@@ -1,0 +1,29 @@
+{
+  "num_train_images": 15837,
+  "num_val_images": 2795,
+  "epochs_run": 5,
+  "threshold": 0.5,
+  "image_size": 224,
+  "val_loss": 0.22513256967067719,
+  "val_binary_accuracy": 0.9082290530204773,
+  "val_auc": 0.9300556182861328,
+  "f1_threshold_only": {
+    "macro": 0.6940233429920681,
+    "micro": 0.7173553719008264,
+    "samples": 0.6588789505068574
+  },
+  "f1_with_top1_fallback": {
+    "macro": 0.7248402992410684,
+    "micro": 0.7429331559694047,
+    "samples": 0.7555396541443054
+  },
+  "exact_match_accuracy": 0.6898032200357782,
+  "per_class_f1": {
+    "healthy": 0.836627140974967,
+    "scab": 0.7489514679448772,
+    "frog_eye_leaf_spot": 0.7041666666666667,
+    "rust": 0.7518518518518519,
+    "complex": 0.4788732394366197,
+    "powdery_mildew": 0.8285714285714286
+  }
+}
